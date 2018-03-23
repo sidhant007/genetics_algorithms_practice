@@ -3,7 +3,7 @@ var mouse = {x: 0, y:0, isDown: false};
 var ball = {x: 250, y: 200, radius: 0};
 var balls_arr = [], ans = [];
 var opt_x, opt_y, opt_r = 0;
-var n = 10;
+var n = 20;
 
 function getMousePosition(e) {
 	mouse.x = e.pageX - canvas.offsetLeft;
