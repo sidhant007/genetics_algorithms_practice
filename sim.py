@@ -32,7 +32,7 @@ class player:
         self.cardLeft = "N"
         
     def addMoney(self, money):
-        self.money += 4 if self.cardLeft == "R" else 0
+        self.money += 1 if self.cardLeft == "R" else 0
         self.money += money
         #print('{} has {}'.format(self.name, self.money))
 
@@ -115,7 +115,7 @@ class game:
         player_scores = []
         for player in self.players:
             play = player.playCard();
-            pool_money += 1 if play == "R" else 0
+            pool_money += 40 if play == "R" else 0
         pool_money /= len(self.players)
         for player in self.players:
             player.addMoney(pool_money)
@@ -149,7 +149,7 @@ class nn:
                 game.a.setInputMatrix([game.a.rank / 5, game.a.money / total_money, game.a.sumRank / total_rank])
             print 'Done simulating game and computing fitness'
             print str(game.a.rank) + ' ' + str(game.a.money)
-            self.fitness.append((game.a, game.a.money / game.a.rank))
+            self.fitness.append((game.a, game.a.money))
         self.fitness = sorted(self.fitness, cmp=comparator())
         print 'Simulation done. Here is the performance of the agents: '
         print str([x[1] for x in self.fitness])
