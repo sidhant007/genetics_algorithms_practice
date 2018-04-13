@@ -32,7 +32,7 @@ class player:
         self.cardLeft = "N"
         
     def addMoney(self, money):
-        self.money += 1 if self.cardLeft == "R" else 0
+        self.money += 4 if self.cardLeft == "R" else 0
         self.money += money
         #print('{} has {}'.format(self.name, self.money))
 
@@ -59,8 +59,17 @@ class cooperate(player):
         self.cardLeft = "B"
         return "R"
 
+class grudger(player):
+    def __init__(self, name, i):
+        player.__init__(self, name, i)
+        self.beenCheated = False
+
+    def playCard(self):
+        self.cardLeft = "R" if self.beenCheated else "B"
+        return "R" if self.cardLeft == "B" else "B"
+
 class agent(player):
-    num_inputs = 3 
+    num_inputs = 4 
     num_middle = 5
     num_outputs = 2 
     def __init__(self, name):
@@ -100,22 +109,26 @@ class game:
     def __init__(self):
         self.players = []
         self.a = agent("Agent")
+        self.g = grudger("Grudger", 1)
 
         
     def initialize_game(self, num_players):
-        self.a.setInputMatrix([num_players, 0, num_players])
+        self.a.setInputMatrix([num_players, 0, num_players, 0])
         self.players.append(self.a)
-        for i in range(1, num_players // 2 + 1):
+        self.players.append(self.g)
+        for i in range(2, num_players // 2 + 1):
             self.players.append(greedy("Greedy" + str(i), i))
         for i in range(num_players // 2 + 1, num_players):
             self.players.append(cooperate("Cooperate" + str(i), i))
             
     def simulate_round(self):
         pool_money = 0 
+        num_contributors = 0
         player_scores = []
         for player in self.players:
             play = player.playCard();
-            pool_money += 40 if play == "R" else 0
+            pool_money += 100 if play == "R" else 0
+        num_contributors = pool_money / 100
         pool_money /= len(self.players)
         for player in self.players:
             player.addMoney(pool_money)
@@ -125,6 +138,7 @@ class game:
             #print player[0].getID()
             self.players[player[0].getID()].updateRank(idx + 1)
             print(player[0].name + ' is at rank ' + str(idx + 1) + ' with ' + str(player[0].money))
+        return num_contributors
 
 class nn:
     games = []
@@ -137,16 +151,17 @@ class nn:
     def simulate_game(self, num_rounds):
         self.fitness = []
         for idx, game in enumerate(self.games):
-            game.initialize_game(5)
+            game.initialize_game(6)
             total_money = 0
             total_rank = 0
             print 'Simulating Game ' + str(idx + 1)
             for i in range(0, num_rounds):
                 print 'Simulating Round ' + str(i)
-                game.simulate_round()
-                total_money += 20
-                total_rank += 5
-                game.a.setInputMatrix([game.a.rank / 5, game.a.money / total_money, game.a.sumRank / total_rank])
+                num_cheaters = 6 - game.simulate_round()
+                total_money += 24
+                total_rank += 6
+                game.g.beenCheated = True if num_cheaters >= 3 else False
+                game.a.setInputMatrix([game.a.rank / 6, game.a.money / total_money, game.a.sumRank / total_rank, num_cheaters / 6])
             print 'Done simulating game and computing fitness'
             print str(game.a.rank) + ' ' + str(game.a.money)
             self.fitness.append((game.a, game.a.money))
