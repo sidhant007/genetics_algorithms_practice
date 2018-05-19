@@ -9,7 +9,13 @@ class game:
         self.player = player(start_x, start_y)
         self.setFire(num_fires)
         self.grid[self.player.x][self.player.y] = 'P'
+        self.resetGrid = [row[:] for row in self.grid] 
+        self.q = [[[0 for _ in range(5)] for _ in range(cols)] for _ in range(rows)] #[WB, R, L, U, D]
 
+    def reset(self):
+        self.grid = [row[:] for row in self.resetGrid]
+        self.player.reset()
+    
     def setFire(self, n):
         i = 0
         while(i < n):
@@ -38,12 +44,13 @@ class game:
                 self.grid[r][c-1] = 'F'
     
     def waterBomb(self):
-        print("Player used power bomb!")
+        #print("Player used water bomb!")
         px = self.player.x
         py = self.player.y
         for x in range(px - 1, px + 2):
             for y in range(py - 1, py + 2):
-                self.grid[x][y] = 'N'
+                if x >= 0 and x < self.r and y >=0 and y < self.c:
+                    self.grid[x][y] = 'N'
         self.grid[px][py] = 'P'
 
     def actPlayer(self):
@@ -52,40 +59,71 @@ class game:
         playerMove = self.player.makeMove(self.r, self.c)
         npx = playerMove[0]
         npy = playerMove[1]
+        moveType = -1
         if npx == 0 and npy == 0:
             self.waterBomb()
+            moveType = 0
         else:
+            if npx == 0:
+                if npy == 1:
+                    #print("Player moved right")
+                    moveType = 1
+                else:
+                    #print("Player moved left")
+                    moveType = 2
+            else:
+                if npx == -1:
+                    #print("Player moved up")
+                    moveType = 3
+                else:
+                    #print("Player moved down")
+                    moveType = 4
             self.grid[opx][opy] = 'N'
             self.grid[self.player.x][self.player.y] = 'P' if self.grid[self.player.x][self.player.y] != 'F' else 'F'
+        self.spreadFire()
+        self.rewardPlayer(opx, opy, moveType)
     
-    def rewardPlayer(self):
+    def rewardPlayer(self, opx, opy, mti):
         px = self.player.x
         py = self.player.y
+        reward = 0
         if px < 0 or px == self.r or py < 0 or py == self.c:
-            return 1000
+            reward = 1000
         elif self.grid[px][py] == 'F':
-            return -10000
+            reward = -10000
+            self.reset()
         else:
             nf = 0
             for x in range(px - 1, px + 2):
                 for y in range(py - 1, py + 2):
                     if x >= 0 and x < self.r and y >=0 and y < self.c and self.grid[x][y] == 'F':
                         nf += 1
-            return -50 * nf - 10
+            reward = -50 * nf - 10
+        #print("Reward received: " + str(reward))
+        self.q[opx][opy][mti] = reward + 0.8 * max(self.q[px][py]) 
+
 
     def printGrid(self):
         print('\n'.join([''.join(['{:4}'.format(item) for item in row]) for row in self.grid]))
+
+    def printQ(self):
+        print('\n'.join([''.join([str(item.index(max(item))) + ' ' for item in row]) for row in self.q]))
 
 class player:
     
     def __init__(self, sx, sy):
         self.x = sx
         self.y = sy
-        self.score = 0
+        self.rx = sx
+        self.ry = sy
+    
+    def reset(self):
+        self.x = self.rx
+        self.y = self.ry
 
     def makeMove(self, bx, by):
         moves = [[0,0], [0,1], [0,-1], [1,0], [-1,0]]
-        move = moves[0]
+        move = rand.choice(moves)
         while(not self.update(move, bx, by)):
             move = rand.choice(moves)
         return move
@@ -100,23 +138,9 @@ class player:
         else:
             return False
 
-    def updateReward(self, reward):
-        self.score += reward
-
-
 g = game(8, 8, 3, 4, 4)
-for i in range(10):
-    g.printGrid()
-    print("Moving player")
+g.printGrid()
+for i in range(20000):
     g.actPlayer()
-    g.printGrid()
-    print("Spreading Fire")
-    g.spreadFire()
-    g.printGrid()
-    reward = g.rewardPlayer()
-    g.player.updateReward(reward)
-    print("Player has " + str(g.player.score) + " points")
-    if reward == -10000:
-        print("Game over")
-        break
-    
+g.printQ()
+
